@@ -3,51 +3,232 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BD Creative Systems | Smart AI Site</title>
+    <title>BD Creative Systems | Smart AI Websites</title>
 
     <link rel="icon" href="favicon.ico" />
     <link rel="stylesheet" href="styles.css" />
   </head>
 
   <body>
-    <div class="container">
-      <!-- Top / Hero -->
-      <div style="margin-bottom: 18px;">
-        <h1 style="margin: 0 0 8px 0; font-size: 34px; letter-spacing: -0.4px;">
-          BD Creative Systems — Smart AI Site
-        </h1>
-        <p style="margin: 0; color: rgba(255,255,255,0.70); max-width: 760px;">
-          Lead capture + an AI assistant that answers questions about your services. 
-          Tell it your niche and it’ll help you shape your website messaging.
-        </p>
-      </div>
-
-      <!-- Chat Card -->
-      <div class="card">
-        <div class="header">
-          <h2>BD SmartSite Assistant</h2>
-          <div class="status" id="statusBadge">Loading...</div>
+    <!-- NAV -->
+    <header class="nav">
+      <div class="nav-inner">
+        <div class="brand">
+          <div class="brand-badge">BD</div>
+          <div class="brand-text">
+            <div class="brand-title">BD Creative Systems</div>
+            <div class="brand-sub">Smart AI Websites</div>
+          </div>
         </div>
 
-        <!-- Messages -->
-        <div id="messages"></div>
-
-        <!-- Input -->
-        <div class="inputBar">
-          <input
-            id="userInput"
-            type="text"
-            placeholder="Type a message… (ex: I’m a realtor in Norman, OK. Help me write my homepage.)"
-            autocomplete="off"
-          />
-          <button id="sendBtn">Send</button>
-        </div>
-
-        <div class="helper">
-          Tip: On the free Render plan, the first message can take ~30–60 seconds if the backend is asleep.
+        <div class="nav-actions">
+          <a class="nav-link" href="#packages">Packages</a>
+          <a class="nav-btn" href="#chat">Try the AI</a>
         </div>
       </div>
-    </div>
+    </header>
+
+    <!-- HERO -->
+    <main class="page">
+      <section id="lead" class="hero">
+        <div class="hero-left">
+          <div class="pill">Live demo • AI chat + lead capture</div>
+
+          <h1 class="headline">
+            AI-Powered Websites That<br />
+            Capture Leads While You<br />
+            Sleep
+          </h1>
+
+          <p class="subhead">
+            I build smart business websites with built-in AI assistants that answer questions,
+            qualify visitors, and turn traffic into real leads.
+          </p>
+
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#chat">Chat with the AI</a>
+            <a class="btn btn-secondary" href="#lead-capture">Get a Quote</a>
+          </div>
+
+          <div class="chips">
+            <div class="chip">
+              <div class="chip-top">24/7</div>
+              <div class="chip-bottom">Answers FAQs</div>
+            </div>
+            <div class="chip">
+              <div class="chip-top">1-Click</div>
+              <div class="chip-bottom">Lead capture</div>
+            </div>
+            <div class="chip">
+              <div class="chip-top">Fast</div>
+              <div class="chip-bottom">Deploy + brand</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HERO DEMO CHAT WIDGET -->
+        <div class="hero-right">
+          <div class="demo-window">
+            <div class="demo-titlebar">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+              <span class="demo-title">Live AI Assistant</span>
+            </div>
+
+            <div class="demo-body" id="demoBody">
+              <div class="bubble bubble-ai">
+                Hi 👋 I can help with pricing, packages, or your website goal.
+              </div>
+
+              <div class="bubble bubble-user">How much does a smart website cost?</div>
+
+              <div class="bubble bubble-ai">
+                Starter starts at $499. Want a 1-page site or multi-page?
+              </div>
+
+              <div class="demo-tip">Tip: Try the real chat below ⬇️</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 FEATURE CARDS -->
+      <section class="cards">
+        <div class="card">
+          <div class="card-title">24/7 AI Sales Assistant</div>
+          <div class="card-text">
+            Answers questions, guides visitors, and keeps conversations moving — automatically.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Smart Lead Capture</div>
+          <div class="card-text">
+            Collects name + email + business info so you can follow up with real intent.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Built for Growth</div>
+          <div class="card-text">
+            Designed for upgrades: email, calendar booking, CRM, and automation workflows.
+          </div>
+        </div>
+      </section>
+
+      <!-- PACKAGES -->
+      <section id="packages" class="section">
+        <div class="section-head">
+          <h2>Packages</h2>
+          <p>Simple options you can sell fast. Upgrade later.</p>
+        </div>
+
+        <div class="pricing">
+          <div class="price-card">
+            <div class="price-name">Starter</div>
+            <div class="price">$499+</div>
+            <ul class="list">
+              <li>1-page landing page</li>
+              <li>AI assistant demo</li>
+              <li>Lead capture form</li>
+              <li>Deployed live</li>
+            </ul>
+            <a class="btn btn-primary full" href="#lead-capture">Get Starter</a>
+          </div>
+
+          <div class="price-card featured">
+            <div class="price-badge">Most Popular</div>
+            <div class="price-name">Growth</div>
+            <div class="price">$999+</div>
+            <ul class="list">
+              <li>Multi-page site</li>
+              <li>AI assistant tuned to your business</li>
+              <li>Lead capture + email alerts</li>
+              <li>Basic SEO setup</li>
+            </ul>
+            <a class="btn btn-primary full" href="#lead-capture">Get Growth</a>
+          </div>
+
+          <div class="price-card">
+            <div class="price-name">Pro</div>
+            <div class="price">$1499+</div>
+            <ul class="list">
+              <li>Everything in Growth</li>
+              <li>Calendar booking</li>
+              <li>CRM / automation add-ons</li>
+              <li>Priority support</li>
+            </ul>
+            <a class="btn btn-primary full" href="#lead-capture">Get Pro</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- LEAD CAPTURE -->
+      <section id="lead-capture" class="section">
+        <div class="section-head">
+          <h2>Get a Quote</h2>
+          <p>Tell me what you do and what you want your website to accomplish.</p>
+        </div>
+
+        <div class="lead-box">
+          <div class="lead-grid">
+            <label class="field">
+              <span>Name</span>
+              <input id="leadName" type="text" placeholder="Your name" />
+            </label>
+
+            <label class="field">
+              <span>Email</span>
+              <input id="leadEmail" type="email" placeholder="you@email.com" />
+            </label>
+
+            <label class="field wide">
+              <span>Business Type</span>
+              <input id="leadBusiness" type="text" placeholder="Realtor, salon, coach, cleaning service..." />
+            </label>
+
+            <label class="field wide">
+              <span>What do you want your site to do?</span>
+              <textarea id="leadGoal" rows="4" placeholder="Capture leads, book calls, sell packages, etc."></textarea>
+            </label>
+          </div>
+
+          <button id="leadBtn" class="btn btn-secondary">Submit Lead</button>
+          <div id="leadStatus" class="small muted"></div>
+        </div>
+      </section>
+
+      <!-- REAL CHAT -->
+      <section id="chat" class="section">
+        <div class="section-head">
+          <h2>Chat with the AI Assistant</h2>
+          <p>Ask about pricing, packages, or what your website should do.</p>
+        </div>
+
+        <div class="chat-card">
+          <div class="chat-header">
+            <div class="chat-title">BD SmartSite Assistant</div>
+            <div class="status" id="statusBadge">Connecting...</div>
+          </div>
+
+          <div id="messages" class="messages"></div>
+
+          <div class="chat-input">
+            <input id="userInput" type="text" placeholder="Type your message..." autocomplete="off" />
+            <button id="sendBtn" class="btn btn-primary">Send</button>
+          </div>
+
+          <div class="small muted">
+            If the server was asleep, the first message may take ~30–60 seconds to wake.
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="muted small">© <span id="year"></span> BD Creative Systems</div>
+      </footer>
+    </main>
 
     <script src="app.js"></script>
   </body>
