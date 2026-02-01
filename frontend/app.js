@@ -1,146 +1,73 @@
-// ========= CONFIG =========
-// Put your BACKEND Render URL here (no trailing slash)
-const API_BASE = "https://bd-smart-ai-backend.onrender.com";
+// ✅ SET THIS to your backend base URL (NOT the frontend URL)
+// Example: "https://bd-smart-ai-backend.onrender.com"
+const BACKEND_URL = "https://bd-smart-ai-backend.onrender.com";
 
-// ========= HELPERS =========
-const $ = (id) => document.getElementById(id);
 
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+const chatWindow = document.getElementById("chatWindow");
+const chatForm = document.getElementById("chatForm");
+const userInput = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
+
+const statusText = document.getElementById("statusText");
+const statusNote = document.getElementById("statusNote");
+const yearEl = document.getElementById("year");
+
+yearEl.textContent = String(new Date().getFullYear());
+
+function addMessage(text, who) {
+  const el = document.createElement("div");
+  el.className = `msg ${who}`;
+  el.textContent = text;          // safe text output
+  chatWindow.appendChild(el);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-function addMessage(role, text) {
-  const wrap = $("messages");
-  const bubble = document.createElement("div");
-  bubble.className = `bubble ${role === "user" ? "bubble-user" : "bubble-ai"}`;
-
-  // IMPORTANT: preserve multi-line + wrap nicely
-  bubble.innerHTML = escapeHtml(text).replaceAll("\n", "<br/>");
-
-  wrap.appendChild(bubble);
-  wrap.scrollTop = wrap.scrollHeight;
-}
-
-function setStatus(label, good = false) {
-  const el = $("statusBadge");
-  el.textContent = label;
-  el.classList.toggle("good", !!good);
-}
-
-// ========= API =========
-async function healthCheck() {
+async function checkHealth() {
   try {
-    const res = await fetch(`${API_BASE}/health`, { method: "GET" });
-    if (!res.ok) throw new Error("Health not ok");
-    setStatus("Ready", true);
-    return true;
-  } catch {
-    setStatus("Waking...", false);
-    return false;
+    const res = await fetch(`${BACKEND_URL}/health`, { method: "GET" });
+    if (!res.ok) throw new Error(`Health not ok: ${res.status}`);
+    const data = await res.json();
+    statusText.textContent = "Backend online";
+    statusNote.textContent = data?.service ? `Service: ${data.service}` : "Ready.";
+  } catch (e) {
+    statusText.textContent = "Backend offline";
+    statusNote.textContent = "If chat fails, confirm your backend URL and Render status.";
   }
 }
 
-async function sendChat(message) {
-  const payload = { message };
+async function sendMessage(message) {
+  addMessage(message, "user");
 
-  // Your FastAPI likely returns: { reply: "..." } or { response: "..." }
-  // We'll support both, plus a fallback.
-  const res = await fetch(`${API_BASE}/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  // little UX: disable while waiting
+  sendBtn.disabled = true;
+  sendBtn.textContent = "Sending…";
 
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    const detail = data?.detail || "Something went wrong.";
-    throw new Error(detail);
-  }
-
-  return data?.reply || data?.response || data?.message || JSON.stringify(data);
-}
-
-// ========= LEAD CAPTURE (optional: only if your backend supports it) =========
-async function submitLead() {
-  const name = $("leadName").value.trim();
-  const email = $("leadEmail").value.trim();
-  const business = $("leadBusiness").value.trim();
-  const goal = $("leadGoal").value.trim();
-  const status = $("leadStatus");
-
-  if (!name || !email) {
-    status.textContent = "Please add at least name + email.";
-    return;
-  }
-
-  status.textContent = "Submitting...";
-
-  // If you don't have /lead on backend yet, this will fail safely.
   try {
-    const res = await fetch(`${API_BASE}/lead`, {
+    const res = await fetch(`${BACKEND_URL}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, business, goal }),
+      body: JSON.stringify({ message })
     });
 
-    if (!res.ok) throw new Error("Lead endpoint not available yet.");
-    status.textContent = "✅ Lead submitted!";
+    const data = await res.json();
+    const reply = (data && data.reply) ? data.reply : "No reply received.";
+    addMessage(reply, "ai");
   } catch (e) {
-    status.textContent =
-      "Saved locally ✅ (Backend /lead not set yet).";
-
-    // quick local fallback so you don't lose it
-    const leads = JSON.parse(localStorage.getItem("bd_leads") || "[]");
-    leads.push({ name, email, business, goal, ts: new Date().toISOString() });
-    localStorage.setItem("bd_leads", JSON.stringify(leads));
+    addMessage("⚠️ Could not reach the AI backend. Check your BACKEND_URL and Render logs.", "ai");
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Send";
   }
 }
 
-// ========= UI WIRING =========
-async function onSend() {
-  const input = $("userInput");
-  const msg = input.value.trim();
+chatForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const msg = (userInput.value || "").trim();
   if (!msg) return;
+  userInput.value = "";
+  sendMessage(msg);
+});
 
-  addMessage("user", msg);
-  input.value = "";
-
-  try {
-    setStatus("Thinking...", false);
-    const reply = await sendChat(msg);
-    addMessage("ai", reply);
-    setStatus("Ready", true);
-  } catch (e) {
-    addMessage("ai", `⚠️ ${e.message}\n\nIf the backend was asleep, try again in ~30 seconds.`);
-    setStatus("Waking...", false);
-  }
-}
-
-function init() {
-  $("year").textContent = String(new Date().getFullYear());
-
-  // Initial assistant prompt once (not repeated)
-  addMessage("ai", "Hey! 👋 What kind of business is this for? (ex: realtor, salon, coach, cleaning service)");
-
-  $("sendBtn").addEventListener("click", onSend);
-  $("userInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") onSend();
-  });
-
-  const leadBtn = $("leadBtn");
-  if (leadBtn) leadBtn.addEventListener("click", submitLead);
-
-  // Health check with a small retry if it’s asleep
-  healthCheck();
-  setTimeout(healthCheck, 2500);
-}
-
-document.addEventListener("DOMContentLoaded", init);
+checkHealth();
 
 
