@@ -1,154 +1,98 @@
-// ===============================
-// BD Creative Systems — Frontend
-// ===============================
+// frontend/app.js
 
-// ✅ Your LIVE backend
+// 🔥 Put your Render backend URL here:
 const API_BASE = "https://bd-smart-ai-backend.onrender.com";
-const CHAT_URL = `${API_BASE}/chat`;
-const LEAD_URL = `${API_BASE}/lead`;
 
-const form = document.getElementById("chat-form");
-const input = document.getElementById("user-input");
-const messages = document.getElementById("messages");
-const statusPill = document.getElementById("status-pill");
+const messagesEl = document.getElementById("messages");
+const inputEl = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
+const statusEl = document.getElementById("statusBadge");
 
-// Lead form elements
-const leadForm = document.getElementById("lead-form");
-const leadResult = document.getElementById("lead-result");
-const leadName = document.getElementById("lead-name");
-const leadEmail = document.getElementById("lead-email");
-const leadBusiness = document.getElementById("lead-business");
-const leadGoal = document.getElementById("lead-goal");
-const leadNotes = document.getElementById("lead-notes");
+const chat = []; // { role: "user"|"assistant", content: string }
 
-function addMessage(text, sender = "bot") {
-  const div = document.createElement("div");
-  div.className = `message ${sender}`;
-  div.textContent = text;
-  messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
+function setStatus(text) {
+  if (!statusEl) return;
+  statusEl.textContent = text;
 }
 
-function setStatus(text, kind = "neutral") {
-  statusPill.textContent = text;
-  statusPill.style.color = "";
-  statusPill.style.borderColor = "";
-  statusPill.style.background = "";
-
-  if (kind === "warn") {
-    statusPill.style.color = "rgba(255,255,255,0.92)";
-    statusPill.style.borderColor = "rgba(245,158,11,0.5)";
-    statusPill.style.background = "rgba(245,158,11,0.12)";
-  }
-  if (kind === "ok") {
-    statusPill.style.color = "rgba(255,255,255,0.92)";
-    statusPill.style.borderColor = "rgba(34,197,94,0.45)";
-    statusPill.style.background = "rgba(34,197,94,0.10)";
-  }
+function addMessage(role, content) {
+  chat.push({ role, content });
+  renderMessages();
 }
 
-async function postJson(url, payload, timeoutMs = 25000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+function renderMessages() {
+  messagesEl.innerHTML = "";
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    signal: controller.signal,
+  chat.forEach((m) => {
+    const row = document.createElement("div");
+    row.className = `msg-row ${m.role}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = `bubble ${m.role}`;
+    bubble.textContent = m.content;
+
+    // ✅ Makes assistant replies show multi-line properly
+    bubble.style.whiteSpace = "pre-wrap";
+
+    row.appendChild(bubble);
+    messagesEl.appendChild(row);
   });
 
-  clearTimeout(timer);
-
-  // Try to parse JSON, even on errors
-  let data = null;
-  try { data = await res.json(); } catch (_) {}
-
-  return { ok: res.ok, status: res.status, data };
+  // Auto-scroll to bottom
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-// -------------------------------
-// Chat
-// -------------------------------
-async function sendChat(message) {
-  // First request might “wake” Render free tier
-  setStatus("Thinking…", "warn");
-
-  // show a subtle system message if it’s slow
-  const slowTimer = setTimeout(() => {
-    addMessage("Waking up the server… one moment ⏳", "system");
-  }, 1800);
-
-  // retry once if wake-up / network hiccup
-  let attempt = 0;
-  while (attempt < 2) {
-    try {
-      const { ok, data } = await postJson(CHAT_URL, { message });
-
-      clearTimeout(slowTimer);
-
-      if (!ok) {
-        setStatus("Error", "warn");
-        return "⚠️ The server responded with an error. Try again in a moment.";
-      }
-
-      setStatus("Ready", "ok");
-      return data?.reply || "No reply received.";
-    } catch (err) {
-      attempt += 1;
-      if (attempt >= 2) {
-        clearTimeout(slowTimer);
-        setStatus("Offline?", "warn");
-        return "⚠️ I couldn’t reach the AI server. Please try again (it may be waking up).";
-      }
-      // short delay before retry
-      await new Promise(r => setTimeout(r, 2500));
-    }
-  }
-}
-
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const text = input.value.trim();
+async function sendMessage() {
+  const text = inputEl.value.trim();
   if (!text) return;
 
-  addMessage(text, "user");
-  input.value = "";
+  addMessage("user", text);
+  inputEl.value = "";
+  inputEl.focus();
 
-  const reply = await sendChat(text);
-  addMessage(reply, "bot");
-});
-
-// -------------------------------
-// Lead Capture
-// -------------------------------
-leadForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  leadResult.textContent = "Sending…";
-
-  const payload = {
-    name: leadName.value.trim(),
-    email: leadEmail.value.trim(),
-    business: leadBusiness.value.trim(),
-    goal: leadGoal.value,
-    notes: leadNotes.value.trim(),
-    source: "website",
-  };
+  setStatus("Thinking...");
 
   try {
-    const { ok, data } = await postJson(LEAD_URL, payload, 25000);
+    const payload = {
+      message: text,
+      history: chat.map((m) => ({ role: m.role, content: m.content })),
+    };
 
-    if (!ok) {
-      leadResult.textContent = "⚠️ Couldn’t submit right now. Please try again.";
-      return;
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errText}`);
     }
 
-    leadResult.textContent = "✅ Received! I’ll follow up with recommended package + next steps.";
-    leadForm.reset();
+    const data = await res.json();
+    const reply = data.reply || "Hmm… I didn’t get a reply back.";
+
+    addMessage("assistant", reply);
+    setStatus("Ready");
   } catch (err) {
-    leadResult.textContent = "⚠️ Network error — please try again (server may be waking up).";
+    console.error(err);
+    addMessage("assistant", `⚠️ Server error:\n${err.message}`);
+    setStatus("Offline?");
   }
+}
+
+// Events
+sendBtn.addEventListener("click", sendMessage);
+inputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage();
 });
+
+// ✅ Starter message (ONLY ONCE — no more duplicates)
+addMessage(
+  "assistant",
+  "Hey! 👋 What kind of business is this for?\n\nExamples: realtor, salon, coach, cleaning service.\n\nTell me your niche + city and I’ll suggest what to put on your website."
+);
+
+setStatus("Ready");
 
 
