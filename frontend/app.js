@@ -1,73 +1,82 @@
-const chatWidget = document.getElementById("chatWidget");
-const openChat = document.getElementById("openChat");
-const closeChat = document.getElementById("closeChat");
+// ================================
+// BD Creative Systems – Smart AI
+// Frontend App (LIVE)
+// ================================
 
-const messages = document.getElementById("messages");
-const chatForm = document.getElementById("chatForm");
-const chatInput = document.getElementById("chatInput");
+// 🔗 LIVE BACKEND URL (Render)
+const API_BASE = "https://bd-smart-ai-backend.onrender.com";
 
-// Backend API endpoint
-const API_URL = "http://localhost:8000/chat";
+// DOM Elements
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+const chatBox = document.getElementById("chat-box");
 
-// Persist a session id so the bot remembers the conversation
-let sessionId = localStorage.getItem("ai_smart_site_session_id") || null;
-
-function addMessage(text, who) {
-  const div = document.createElement("div");
-  div.className = `msg ${who}`;
-  div.textContent = text;
-  messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
+// Add message to UI
+function addMessage(text, sender = "bot") {
+  const message = document.createElement("div");
+  message.className = sender === "user" ? "message user" : "message bot";
+  message.textContent = text;
+  chatBox.appendChild(message);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function openChatWidget() {
-  chatWidget.classList.remove("hidden");
-
-  // Only show a greeting if there are no messages yet
-  if (messages.children.length === 0) {
-    addMessage("Hey! 👋 I’m the site assistant. What can I help you with today?", "bot");
-  }
+// Loading indicator
+function addLoading() {
+  const loading = document.createElement("div");
+  loading.className = "message bot loading";
+  loading.id = "loading";
+  loading.textContent = "Thinking...";
+  chatBox.appendChild(loading);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-openChat.addEventListener("click", openChatWidget);
+function removeLoading() {
+  const loading = document.getElementById("loading");
+  if (loading) loading.remove();
+}
 
-closeChat.addEventListener("click", () => {
-  chatWidget.classList.add("hidden");
-});
-
+// Handle form submit
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const text = chatInput.value.trim();
-  if (!text) return;
+  const userMessage = chatInput.value.trim();
+  if (!userMessage) return;
 
-  addMessage(text, "user");
+  addMessage(userMessage, "user");
   chatInput.value = "";
+  addLoading();
 
   try {
-    const res = await fetch(API_URL, {
+    const response = await fetch(`${API_BASE}/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        message: text,
-        session_id: sessionId
-      })
+        message: userMessage,
+      }),
     });
 
-    const data = await res.json();
+    removeLoading();
 
-    // Save session_id so the backend remembers the same user next time
-    if (data.session_id) {
-      sessionId = data.session_id;
-      localStorage.setItem("ai_smart_site_session_id", sessionId);
+    if (!response.ok) {
+      throw new Error("Server error");
     }
 
-    addMessage(data.reply, "bot");
-  } catch (err) {
-    addMessage("Couldn’t reach the backend. Make sure FastAPI is running on port 8000.", "bot");
+    const data = await response.json();
+    addMessage(data.reply || "No response received.");
+  } catch (error) {
+    removeLoading();
+    addMessage(
+      "⚠️ Sorry, the AI service is temporarily unavailable. Please try again."
+    );
+    console.error("Chat error:", error);
   }
 });
 
-// Optional: allow user to reset the conversation from the browser console:
-// localStorage.removeItem("ai_smart_site_session_id");
+// Optional welcome message
+window.addEventListener("load", () => {
+  addMessage("👋 Hi! I'm your AI assistant. How can I help you today?");
+});
+
 
