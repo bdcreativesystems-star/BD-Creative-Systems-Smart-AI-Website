@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Smart Business Website</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="icon" href="data:,">
+</head>
+<body>
+  <header class="hero">
+    <h1>BD Creative Systems Smart AI Website</h1>
+    <p>Landing page + AI assistant + smart lead capture. Built with Python + automation.</p>
+    <button id="openChat" class="cta">Chat with the Site Assistant</button>
+  </header>
+
+  <section class="features">
+    <div class="card">
+      <h2>AI Assistant</h2>
+      <p>Answers FAQs, explains services, and helps visitors take action.</p>
+    </div>
+    <div class="card">
+      <h2>Smart Lead Capture</h2>
+      <p>Collects info and organizes leads so you don’t chase random messages.</p>
+    </div>
+    <div class="card">
+      <h2>Automation-Ready</h2>
+      <p>Connects to email, Sheets, CRM, calendars, and more.</p>
+    </div>
+  </section>
+
+  <div id="chatWidget" class="chat hidden">
+    <div class="chat-header">
+      <div>
+        <strong>Site Assistant</strong>
+        <div class="subtext">Fast replies • demo mode</div>
+      </div>
+      <button id="closeChat" class="icon-btn">✕</button>
+    </div>
+
+    <div id="messages" class="chat-messages"></div>
+
+    <form id="chatForm" class="chat-form">
+      <input id="chatInput" type="text" placeholder="Ask about services, pricing, etc..." autocomplete="off"/>
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
