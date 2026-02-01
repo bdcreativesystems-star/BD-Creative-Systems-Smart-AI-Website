@@ -1,140 +1,95 @@
 import os
-import csv
-from datetime import datetime
-from pathlib import Path
 from typing import Optional, Dict, Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from dotenv import load_dotenv
-
-# OpenAI (live mode)
-from openai import OpenAI
 
 load_dotenv()
 
-AI_MODE = os.getenv("AI_MODE", "demo").strip().lower()  # demo | live
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
+# ---- App ----
+app = FastAPI(title="BD Smart AI Backend", version="1.0.0")
 
-client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-
-app = FastAPI(title="BD Smart AI Backend", version="1.1.0")
+# ---- CORS (safe default: allow your frontend + local dev) ----
+allowed_origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1:5173",
+    "https://bd-smart-ai-frontend.onrender.com",
+]
+# Optionally allow additional origins via env var:
+# EXTRA_CORS_ORIGINS="https://yourdomain.com,https://www.yourdomain.com"
+extra = os.getenv("EXTRA_CORS_ORIGINS", "").strip()
+if extra:
+    allowed_origins.extend([o.strip() for o in extra.split(",") if o.strip()])
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten later to your frontend domain
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-BACKEND_DIR = Path(__file__).resolve().parent
-LEADS_CSV = BACKEND_DIR / "leads.csv"
-
-
+# ---- Models ----
 class ChatRequest(BaseModel):
     message: str
-    session_id: Optional[str] = None
-
 
 class ChatResponse(BaseModel):
     reply: str
-    mode: str
 
+# ---- OpenAI (supports both old and new env var names) ----
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_KEY")
 
-class LeadRequest(BaseModel):
-    name: str
-    email: EmailStr
-    business: str
-    goal: str
-    notes: Optional[str] = ""
-    source: Optional[str] = "website"
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "mode": AI_MODE}
-
-
-@app.get("/")
-def root():
-    return {"status": "ok", "message": "Backend running. Use /docs, /health, POST /chat, POST /lead"}
-
-
-@app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
-    user_text = (req.message or "").strip()
-    if not user_text:
-        return ChatResponse(reply="Type a message and I’ll help 🙂", mode=AI_MODE)
-
-    # Demo mode (free + reliable)
-    if AI_MODE != "live":
-        return ChatResponse(
-            reply=(
-                "Demo mode is on ✅\n"
-                "Ask me about pricing, packages, or what you want your website to do."
-            ),
-            mode=AI_MODE,
-        )
-
-    # Live mode
-    if client is None:
-        return ChatResponse(
-            reply="Live mode is on, but OPENAI_API_KEY is missing on the server.",
-            mode=AI_MODE,
-        )
-
-    system_prompt = (
-        "You are the BD Creative Systems website assistant.\n"
-        "Be friendly, concise, and conversion-focused.\n"
-        "Offer Starter/Growth/Custom packages and ask one short follow-up question if needed.\n"
-        "Keep replies under 90 words unless user asks for details.\n"
+def _fallback_reply(user_text: str) -> str:
+    # Safe fallback so your UI still works even if key is missing.
+    return (
+        "I’m online, but the backend is missing an OpenAI API key.\n\n"
+        f"You said: {user_text}\n\n"
+        "Set OPENAI_API_KEY in Render Environment Variables, then redeploy."
     )
 
+@app.get("/health")
+def health() -> Dict[str, Any]:
+    return {"ok": True, "service": "bd-smart-ai-backend"}
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(payload: ChatRequest) -> ChatResponse:
+    user_text = (payload.message or "").strip()
+    if not user_text:
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    # If no key, return a helpful response instead of crashing
+    if not OPENAI_API_KEY:
+        return ChatResponse(reply=_fallback_reply(user_text))
+
+    # --- OpenAI call (works with the new OpenAI Python SDK) ---
     try:
+        from openai import OpenAI  # installed in requirements.txt
+        client = OpenAI(api_key=OPENAI_API_KEY)
+
         resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
+            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": "You are a helpful AI assistant for BD Creative Systems. Be concise, friendly, and practical."},
                 {"role": "user", "content": user_text},
             ],
-            temperature=0.4,
+            temperature=0.7,
         )
-        reply = resp.choices[0].message.content.strip()
-        return ChatResponse(reply=reply, mode=AI_MODE)
-    except Exception:
+
+        reply = resp.choices[0].message.content or ""
+        reply = reply.strip() or "I didn’t get that—can you try again?"
+        return ChatResponse(reply=reply)
+
+    except Exception as e:
+        # Never hard-crash your app; return a useful message
         return ChatResponse(
-            reply="⚠️ The AI service is temporarily unavailable. Please try again.",
-            mode=AI_MODE,
+            reply=(
+                "⚠️ The backend hit an error while generating a reply.\n\n"
+                f"Details: {type(e).__name__}: {e}\n\n"
+                "Check Render logs and confirm your OPENAI_API_KEY is set."
+            )
         )
-
-
-def _ensure_csv_header():
-    if not LEADS_CSV.exists():
-        with open(LEADS_CSV, "w", newline="", encoding="utf-8") as f:
-            w = csv.writer(f)
-            w.writerow(["timestamp", "name", "email", "business", "goal", "notes", "source"])
-
-
-@app.post("/lead")
-def lead(req: LeadRequest):
-    _ensure_csv_header()
-
-    row = [
-        datetime.utcnow().isoformat(),
-        req.name.strip(),
-        req.email.strip(),
-        req.business.strip(),
-        req.goal.strip(),
-        (req.notes or "").strip(),
-        (req.source or "website").strip(),
-    ]
-
-    with open(LEADS_CSV, "a", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(row)
-
-    return {"ok": True}
 
